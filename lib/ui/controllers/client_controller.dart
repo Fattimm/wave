@@ -3,87 +3,89 @@ import '../../models/transaction_model.dart';
 import '../../services/firebase_service.dart';
 import 'auth_controller.dart';
 import '../../models/user_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
+
 
 class ClientController extends GetxController {
   final FirebaseService firebaseService = FirebaseService();
   final AuthController authController = Get.find<AuthController>();
 
-  var balanceVisible = false.obs; // État pour afficher/cacher le solde
-  var isLoading = false.obs; // Indique si une opération est en cours
-  var transactions = <TransactionModel>[].obs; // Liste des transactions
+  var isLoading = false.obs; 
+  var transactions = <TransactionModel>[].obs; 
+  final Rx<UserModel?> currentUser = Rx<UserModel?>(null);
+  final RxBool balanceVisible = false.obs;
 
-  UserModel? currentUser; // Données de l'utilisateur connecté
 
-  // Charger les transactions pour l'utilisateur connecté
-  Future<void> loadTransactions(String userId) async {
-    isLoading.value = true;
+ @override
+  void onInit() {
+    super.onInit();
+    loadCurrentUser();
+  }
 
+  @override
+  Future<void> fetchTransactions(String userId) async {
     try {
-      final userTransactions = await firebaseService.getClientTransactions(userId);
-      transactions.value = userTransactions;
+      transactions.value = await firebaseService.getClientTransactions(userId);
     } catch (e) {
-      Get.snackbar("Erreur", "Impossible de charger les transactions : $e");
-    } finally {
-      isLoading.value = false;
+      print("Erreur lors de la récupération des transactions: $e");
     }
   }
 
-  // Basculer l'affichage du solde
+  
+  Future<void> loadCurrentUser() async {
+    try {
+      final user = await firebaseService.getCurrentUser();
+      if (user != null) {
+        currentUser.value = user;
+      }
+    } catch (e) {
+      print('Erreur lors du chargement de l\'utilisateur: $e');
+    }
+  }
+
+  Future<void> loadTransactions() async {
+    try {
+      if (currentUser.value != null) {
+        final userTransactions = await firebaseService.getClientTransactions(currentUser.value!.id);
+        transactions.assignAll(userTransactions);
+      }
+    } catch (e) {
+      print('Erreur lors du chargement des transactions: $e');
+    }
+  }
+
   void toggleBalanceVisibility() {
     balanceVisible.value = !balanceVisible.value;
   }
 
-  // Méthode pour enregistrer un utilisateur (client ou distributeur)
   Future<void> registerClient(
     String firstName,
     String lastName,
     String phone,
     String email,
     String password,
-    String? photo,
+    String? photoUrl,
     String cni,
     String role,
   ) async {
-    isLoading.value = true;
-
     try {
-      final collectionName = role == 'client' ? 'clients' : 'distributors';
-      final newId = await firebaseService.getNextId(collectionName);
-
-      final newUser = UserModel(
-        id: newId.toString(),
+      UserModel? newUser = await firebaseService.registerUser(
         firstName: firstName,
         lastName: lastName,
         phone: phone,
         email: email,
         password: password,
-        photo: photo,
+        photoUrl: photoUrl,
         cni: cni,
         role: role,
-        balance: 0.0, // Solde initial
       );
 
-      await firebaseService.addUserToCollection(collectionName, newUser);
-
-      Get.snackbar(
-        "Succès",
-        "$role enregistré avec succès avec l'ID $newId.",
-        snackPosition: SnackPosition.BOTTOM,
-      );
-
-      if (role == "client") {
-        Get.offAllNamed('/client/home');
-      } else if (role == "distributeur") {
-        Get.offAllNamed('/distributor/home');
+      if (newUser != null) {
+        Get.snackbar("Succès", "Compte créé avec succès !");
       }
     } catch (e) {
-      Get.snackbar(
-        "Erreur",
-        "Échec de l'enregistrement : $e",
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    } finally {
-      isLoading.value = false;
+      Get.snackbar("Erreur", e.toString());
     }
   }
 }

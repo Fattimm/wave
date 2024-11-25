@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import '../ui/controllers/client_controller.dart';
 import '../services/firebase_service.dart';
+import '../ui/controllers/client_controller.dart';
 
 class ClientBinding extends Bindings {
   @override

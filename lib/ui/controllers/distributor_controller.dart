@@ -1,141 +1,146 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
-import '../../models/deposit_model.dart';
+import 'package:flutter/material.dart';
+import 'package:wave/services/firebase_service.dart';
 import '../../models/transaction_model.dart';
-import '../../services/firebase_service.dart';
-import 'auth_controller.dart';
 import '../../models/user_model.dart';
+import 'auth_controller.dart';
+import 'base_controller.dart';
 
-class DistributorController extends GetxController {
-  final FirebaseService firebaseService = FirebaseService();
+class DistributorController extends BaseController {
   final AuthController authController = Get.find<AuthController>();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  var balanceVisible = false.obs;
-  var isLoading = false.obs;
-  var transactions = <TransactionModel>[].obs;
-  UserModel? currentUser;
 
-  // Charger les données du distributeur
-  Future<void> initializeDistributorData() async {
-    isLoading.value = true;
+ @override
+  void onInit() {
+    super.onInit();
+    loadCurrentUser();
+  }
 
+  @override
+  Future<void> fetchTransactions(String userId) async {
     try {
-      await loadBalance();
-      await loadTransactions();
+      isLoading.value = true;
+      transactions.value = await firebaseService.getDistributorTransactions(userId);
     } catch (e) {
-      Get.snackbar("Erreur", "Impossible de charger les données : $e");
+      print("Erreur lors de la récupération des transactions: $e");
+      throw Exception("Échec du chargement des transactions");
     } finally {
       isLoading.value = false;
     }
   }
 
-  // Charger le solde
-  // Charger le solde
-Future<void> loadBalance() async {
-  isLoading.value = true;
-
-  try {
-    if (authController.currentUser == null) {
-      throw Exception("Utilisateur non authentifié");
-    }
-
-    final user = await firebaseService.getUserByPhone(authController.currentUser!.phone);
-    if (user != null) {
-      currentUser = user;
-      // Si nécessaire, mettre à jour la balance dans `currentUser`
-    }
-  } catch (e) {
-    Get.snackbar("Erreur", "Impossible de charger le solde : $e");
-  } finally {
-    isLoading.value = false;
-  }
-}
-
-
-  // Charger les transactions
-  Future<void> loadTransactions() async {
-    isLoading.value = true;
-
+  // Méthode spécifique au distributeur pour effectuer un dépôt
+  Future<void> deposit(String recipientPhone, double amount) async {
     try {
-      if (authController.currentUser != null) {
-        final userTransactions = await firebaseService.getDistributorTransactions(
-          authController.currentUser!.id,
-        );
-        transactions.assignAll(userTransactions);
+      isLoading.value = true;
+
+      if (authController.currentUser.value == null) {
+        throw Exception('Distributeur non authentifié');
       }
-    } catch (e) {
-      Get.snackbar("Erreur", "Impossible de charger les transactions : $e");
-    } finally {
-      isLoading.value = false;
-    }
-  }
 
-  // Effectuer un dépôt
-  Future<void> makeDeposit(String clientId, double amount, String method) async {
-    if (!validateAmount(amount)) return;
-    if (!await isClientActive(clientId)) return;
+      final distributor = authController.currentUser.value!;
+      
+      if (distributor.balance < amount) {
+        throw Exception('Solde insuffisant');
+      }
+      
+      if (distributor.balance - amount < 5000) {
+        throw Exception('Le solde après dépôt serait inférieur au minimum requis (5000)');
+      }
 
-    isLoading.value = true;
+      final recipient = await firebaseService.getUserByPhone(recipientPhone);
+      if (recipient == null) {
+        throw Exception('Numéro de téléphone destinataire non trouvé');
+      }
 
-    try {
-      final deposit = DepositModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        distributorId: authController.currentUser!.id,
-        clientId: clientId,
-        amount: amount,
-        method: method,
-        date: DateTime.now().toIso8601String(),
+      final transactionData = {
+        'id': DateTime.now().millisecondsSinceEpoch.toString(),
+        'type': 'depot',
+        'senderId': distributor.id,
+        'recipientId': recipient.id,
+        'senderPhone': distributor.phone,
+        'recipientPhone': recipientPhone,
+        'amount': amount,
+        'date': Timestamp.now(),
+        'senderRole': 'distributor',
+        'recipientRole': recipient.role,
+        'description': 'Dépôt effectué par distributeur',
+        'status': 'completed',
+        'initiatorPhone': distributor.phone,
+        'initiatorRole': 'distributeur'
+      };
+
+      WriteBatch batch = _firestore.batch();
+
+      final distributorRef = _firestore.collection('distributors').doc(distributor.id);
+      final recipientRef = _firestore.collection(recipient.role == 'client' ? 'clients' : 'distributors').doc(recipient.id);
+
+      // Mettre à jour le distributeur
+      batch.update(distributorRef, {
+        'balance': FieldValue.increment(-amount),
+        'transactions': FieldValue.arrayUnion([transactionData])
+      });
+
+      // Mettre à jour le destinataire
+      batch.update(recipientRef, {
+        'balance': FieldValue.increment(amount),
+        'transactions': FieldValue.arrayUnion([transactionData])
+      });
+
+      await batch.commit();
+
+      // Mise à jour locale
+      currentUser.value?.balance -= amount;
+      currentUser.value?.transactions.add(TransactionModel.fromJson(transactionData));
+
+      // Recharger les données de l'utilisateur
+      final updatedDistributorDoc = await distributorRef.get();
+      if (updatedDistributorDoc.exists) {
+        currentUser.value = UserModel.fromJson(updatedDistributorDoc.data() as Map<String, dynamic>);
+        await authController.saveCurrentUser(currentUser.value!);
+      }
+
+      Get.snackbar(
+        'Succès',
+        'Dépôt effectué avec succès',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP
       );
-      await firebaseService.addDeposit(deposit);
-      await addTransaction('Dépôt', amount, authController.currentUser!.id, clientId, 'distributeur');
-      Get.snackbar("Succès", "Dépôt de $amount FCFA effectué pour le client $clientId");
+
     } catch (e) {
-      Get.snackbar("Erreur", "Impossible d'effectuer le dépôt : $e");
+      print("Erreur détaillée lors du dépôt: $e");
+      Get.snackbar(
+        'Erreur',
+        'Une erreur est survenue lors du dépôt',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP
+      );
     } finally {
       isLoading.value = false;
     }
   }
 
-  // Vérifier si un montant est valide
-  bool validateAmount(double amount) {
-    if (amount <= 0) {
-      Get.snackbar("Erreur", "Le montant doit être supérieur à zéro.");
-      return false;
-    }
-    return true;
-  }
-
-  // Vérifier si un client est actif
-  Future<bool> isClientActive(String clientId) async {
+  // Méthode pour recharger les transactions
+  Future<void> reloadTransactions() async {
     try {
-      final user = await firebaseService.getUserByPhone(clientId);
-      if (user != null && user.etat == 'actif') {
-        return true;
+      if (currentUser.value != null) {
+        final userDoc = await _firestore
+            .collection('distributors')
+            .doc(currentUser.value!.id)
+            .get();
+            
+        if (userDoc.exists) {
+          final userData = userDoc.data() as Map<String, dynamic>;
+          currentUser.value = UserModel.fromJson(userData);
+          await authController.saveCurrentUser(currentUser.value!);
+        }
       }
-      Get.snackbar("Erreur", "Le compte du client est désactivé.");
-      return false;
     } catch (e) {
-      Get.snackbar("Erreur", "Impossible de vérifier l'état du client : $e");
-      return false;
+      print("Erreur lors du rechargement des transactions: $e");
     }
   }
-
-  // Basculer la visibilité de la balance
-  void toggleBalanceVisibility() {
-    balanceVisible.value = !balanceVisible.value;
-  }
-
-  Future<void> addTransaction(String type, double amount, String senderId,
-      String recipientId, String role) async {
-    final transaction = TransactionModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      type: type,
-      senderId: senderId,
-      recipientId: recipientId,
-      amount: amount,
-      date: DateTime.now().toIso8601String(),
-      role: role,
-    );
-    await firebaseService.addTransaction(transaction);
-  }
-
 }

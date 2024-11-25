@@ -9,6 +9,7 @@ import '../ui/screens/client/client_settings_screen.dart';
 import '../ui/screens/distributor/home_screen.dart';
 import '../bindings/client_binding.dart';
 import '../bindings/distributor_binding.dart';
+import '../ui/screens/distributor/deposit_screen.dart';
 
 class AppRoutes {
   static final routes = [
@@ -52,6 +53,15 @@ class AppRoutes {
       name: '/distributor/home',
       page: () => DistributorHomeScreen(),
       binding: DistributorBinding(),
+    ),
+    GetPage(
+      name: '/client/settings',
+      page: () => ClientSettingsScreen(),
+      binding: ClientBinding(),
+    ),
+    GetPage(
+      name: '/distributor/deposit',
+      page: () => DepositScreen(),
     ),
   ];
 }

@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/client_controller.dart';
+import '../../widgets/circular_button.dart';
+import '../../widgets/transaction_list.dart';
 
-class ClientHomeScreen extends StatelessWidget {
+class ClientHomeScreen extends GetView<ClientController> {
+  const ClientHomeScreen({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
-    final clientController = Get.find<ClientController>();
-
     return Scaffold(
       appBar: AppBar(
-        title: Text("Accueil Client"),
+        title: const Text("Bienvenue Client"),
         actions: [
           IconButton(
-            icon: Icon(Icons.settings, color: Colors.white),
-            onPressed: () {
-              Get.toNamed('/client/settings');
-            },
+            icon: const Icon(Icons.settings, color: Colors.black),
+            onPressed: () => Get.toNamed('/client/settings'),
           ),
         ],
       ),
@@ -23,114 +23,72 @@ class ClientHomeScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Row(
+            // Section du solde avec Obx individuels
+            Obx(() => Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Obx(() => Text(
-                      clientController.balanceVisible.value
-                          ? "Solde: ${clientController.currentUser?.balance ?? 0.0} FCFA"
-                          : "Solde: ****",
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    )),
+                Text(
+                  controller.balanceVisible.value
+                      ? "Solde: ${controller.currentUser?.value?.balance ?? 0.0} FCFA"
+                      : "Solde: ****",
+                  style: const TextStyle(
+                    fontSize: 24, 
+                    fontWeight: FontWeight.bold
+                  ),
+                ),
                 IconButton(
-                  icon: Obx(() => Icon(
-                        clientController.balanceVisible.value
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                        color: Colors.blue,
-                      )),
-                  onPressed: clientController.toggleBalanceVisibility,
+                  icon: Icon(
+                    controller.balanceVisible.value
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                    color: Colors.blue,
+                  ),
+                  onPressed: controller.toggleBalanceVisibility,
+                ),
+              ],
+            )),
+
+            const SizedBox(height: 16),
+
+            // Boutons statiques (pas besoin de Obx)
+            GridView.count(
+              crossAxisCount: 4,
+              shrinkWrap: true,
+              mainAxisSpacing: 14.0,
+              crossAxisSpacing: 16.0,
+              children: [
+                CircularButton(
+                  icon: Icons.history,
+                  label: "Scanner",
+                  onPressed: () => Get.toNamed('/client/scanner'),
+                ),
+                CircularButton(
+                  icon: Icons.send,
+                  label: "Transfert",
+                  onPressed: () => Get.toNamed('/client/transfer'),
+                ),
+                CircularButton(
+                  icon: Icons.group_add,
+                  label: "Transfert Multiple",
+                  onPressed: () => Get.toNamed('/client/multiple-transfer'),
+                ),
+                CircularButton(
+                  icon: Icons.schedule,
+                  label: "Planification",
+                  onPressed: () => Get.toNamed('/client/schedule'),
                 ),
               ],
             ),
-            SizedBox(height: 16),
-            Expanded(
-              child: GridView.count(
-                crossAxisCount: 2, // Nombre de colonnes
-                mainAxisSpacing: 14.0, // Espacement vertical entre les boutons
-                crossAxisSpacing: 16.0, // Espacement horizontal entre les boutons
-                childAspectRatio: 1.2, // Ratio de largeur/hauteur pour réduire la taille
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () => Get.toNamed('/client/scanner'),
-                    icon: Icon(Icons.history, color: Colors.blue, size: 24), // Taille de l'icône
-                    label: Text("Scanner", style: TextStyle(fontSize: 16)), // Taille du texte
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 10), // Ajustez le padding
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.blue,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20.0),
-                      ),
-                      side: BorderSide(color: Colors.blue),
+            const SizedBox(height: 20),
+
+            // Liste des transactions réactive
+            Obx(() => Expanded(
+              child: controller.isLoading.value
+                  ? const Center(child: CircularProgressIndicator())
+                  : TransactionsList(
+                      transactions: controller.transactions,
                     ),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: () => Get.toNamed('/client/transfer'),
-                    icon: Icon(Icons.send, color: Colors.blue, size: 24),
-                    label: Text("Transfert", style: TextStyle(fontSize: 16)),
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 10),
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.blue,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20.0),
-                      ),
-                      side: BorderSide(color: Colors.blue),
-                    ),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: () => Get.toNamed('/client/multiple-transfer'),
-                    icon: Icon(Icons.group_add, color: Colors.blue, size: 24),
-                    label: Text("Transfert Multiple", style: TextStyle(fontSize: 16)),
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 10),
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.blue,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20.0),
-                      ),
-                      side: BorderSide(color: Colors.blue),
-                    ),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: () => Get.toNamed('/client/schedule'),
-                    icon: Icon(Icons.schedule, color: Colors.blue, size: 24),
-                    label: Text("Planification", style: TextStyle(fontSize: 16)),
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 10),
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.blue,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20.0),
-                      ),
-                      side: BorderSide(color: Colors.blue),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 20),
-            Expanded(
-              child: Obx(() {
-                final transactions = clientController.transactions;
-                if (transactions.isEmpty) {
-                  return Center(child: Text("Aucune transaction disponible."));
-                }
-                return ListView.builder(
-                  itemCount: transactions.length,
-                  itemBuilder: (context, index) {
-                    final transaction = transactions[index];
-                    return ListTile(
-                      leading: Icon(Icons.monetization_on, color: Colors.blue),
-                      title: Text("${transaction.type}"),
-                      subtitle: Text("Montant: ${transaction.amount} FCFA\nDate: ${transaction.date}"),
-                      trailing: Icon(Icons.arrow_forward_ios, color: Colors.grey),
-                    );
-                  },
-                );
-              }),
-            ),
+            )),
           ],
         ),
       ),

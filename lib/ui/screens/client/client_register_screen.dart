@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../controllers/client_controller.dart';
+import '../../controllers/auth_controller.dart';
+import '../../../models/transaction_model.dart';
+import '../../../models/user_model.dart';
 
 class ClientRegisterScreen extends StatelessWidget {
   final firstNameController = TextEditingController();
@@ -11,12 +13,12 @@ class ClientRegisterScreen extends StatelessWidget {
   final photoUrlController = TextEditingController();
   final cniController = TextEditingController();
 
-  // Utilisation de GetX pour rendre selectedRole observable
   final selectedRole = 'client'.obs;
 
   @override
   Widget build(BuildContext context) {
-    final clientController = Get.find<ClientController>();
+    // Récupérer une instance d'AuthController
+    final authController = Get.find<AuthController>();
 
     return Scaffold(
       appBar: AppBar(title: Text("Créer un compte Client")),
@@ -64,7 +66,7 @@ class ClientRegisterScreen extends StatelessWidget {
                 controller: passwordController,
                 obscureText: true,
                 decoration: InputDecoration(
-                  labelText: 'Mot de passe (4 chiffres)',
+                  labelText: 'Mot de passe (6 chiffres)',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -92,7 +94,8 @@ class ClientRegisterScreen extends StatelessWidget {
                       labelText: 'Rôle',
                       border: OutlineInputBorder(),
                     ),
-                    items: <String>['client', 'distributeur'].map((String value) {
+                    items:
+                        <String>['client', 'distributeur'].map((String value) {
                       return DropdownMenuItem<String>(
                         value: value,
                         child: Text(value),
@@ -104,20 +107,51 @@ class ClientRegisterScreen extends StatelessWidget {
                   )),
               SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () {
-                  if (_validateInputs(context)) {
-                    clientController.registerClient(
-                      firstNameController.text,
-                      lastNameController.text,
-                      phoneController.text,
-                      emailController.text,
-                      passwordController.text,
-                      photoUrlController.text.isNotEmpty
+                onPressed: () async {
+                  if (_validateInputs()) {
+                    // Créer une transaction initiale avec le nouveau modèle
+                    final initialTransaction = TransactionModel.initialDeposit(
+                      initiatorPhone: phoneController.text,
+                      role: selectedRole.value == 'client'
+                          ? UserRole.client
+                          : UserRole.distributeur,
+                    );
+
+                    // Créer un utilisateur avec la transaction initiale
+                    UserModel newUser = UserModel(
+                      id: DateTime.now().millisecondsSinceEpoch.toString(),
+                      firstName: firstNameController.text,
+                      lastName: lastNameController.text,
+                      phone: phoneController.text,
+                      email: emailController.text,
+                      password: passwordController.text,
+                      role: selectedRole.value,
+                      cni: cniController.text,
+                      photo: photoUrlController.text.isNotEmpty
                           ? photoUrlController.text
                           : null,
-                      cniController.text,
-                      selectedRole.value,
+                      balance: 0.0,
+                      transactions: [initialTransaction],
                     );
+
+                    try {
+                      await authController.registerWithEmail(
+                        emailController.text,
+                        passwordController.text,
+                        newUser.toJson(),
+                      );
+                      Get.snackbar(
+                        'Succès',
+                        'Compte créé avec succès',
+                        snackPosition: SnackPosition.BOTTOM,
+                      );
+                    } catch (e) {
+                      Get.snackbar(
+                        'Erreur',
+                        'Erreur lors de la création du compte: $e',
+                        snackPosition: SnackPosition.BOTTOM,
+                      );
+                    }
                   }
                 },
                 child: Text("Créer un compte"),
@@ -130,21 +164,27 @@ class ClientRegisterScreen extends StatelessWidget {
   }
 
   // Fonction pour valider les entrées
-  bool _validateInputs(BuildContext context) {
+  bool _validateInputs() {
     if (firstNameController.text.isEmpty ||
         lastNameController.text.isEmpty ||
         phoneController.text.isEmpty ||
         emailController.text.isEmpty ||
         passwordController.text.isEmpty ||
         cniController.text.isEmpty) {
-      Get.snackbar("Erreur", "Tous les champs obligatoires doivent être remplis.",
-          snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+        "Erreur",
+        "Tous les champs obligatoires doivent être remplis.",
+        snackPosition: SnackPosition.BOTTOM,
+      );
       return false;
     }
 
-    if (passwordController.text.length != 4) {
-      Get.snackbar("Erreur", "Le mot de passe doit contenir 4 chiffres.",
-          snackPosition: SnackPosition.BOTTOM);
+    if (passwordController.text.length != 6) {
+      Get.snackbar(
+        "Erreur",
+        "Le mot de passe doit contenir 6 chiffres.",
+        snackPosition: SnackPosition.BOTTOM,
+      );
       return false;
     }
 

@@ -5,13 +5,19 @@ import 'routes/app_routes.dart';
 import 'bindings/client_binding.dart';
 import 'bindings/distributor_binding.dart';
 import '../ui/controllers/auth_controller.dart';
+import '../ui/controllers/distributor_controller.dart';
+import '../ui/controllers/client_controller.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(); // Initialisez Firebase
   Get.put(AuthController()); // AuthController ajouté ici
+  Get.put(DistributorController());
+  // Get.put(ClientController());
   runApp(MyApp());
 }
+
 
 class MyApp extends StatelessWidget {
   @override
