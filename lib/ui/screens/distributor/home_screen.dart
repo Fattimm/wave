@@ -25,28 +25,26 @@ class DistributorHomeScreen extends GetView<DistributorController> {
           children: [
             // Section du solde avec Obx individuels
             Obx(() => Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  controller.balanceVisible.value
-                      ? "Solde: ${controller.currentUser?.value?.balance ?? 0.0} FCFA"
-                      : "Solde: ****",
-                  style: const TextStyle(
-                    fontSize: 24, 
-                    fontWeight: FontWeight.bold
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(
-                    controller.balanceVisible.value
-                        ? Icons.visibility
-                        : Icons.visibility_off,
-                    color: Colors.blue,
-                  ),
-                  onPressed: controller.toggleBalanceVisibility,
-                ),
-              ],
-            )),
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      controller.balanceVisible.value
+                          ? "Solde: ${controller.currentUser?.value?.balance ?? 0.0} FCFA"
+                          : "Solde: ****",
+                      style: const TextStyle(
+                          fontSize: 24, fontWeight: FontWeight.bold),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        controller.balanceVisible.value
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                        color: Colors.blue,
+                      ),
+                      onPressed: controller.toggleBalanceVisibility,
+                    ),
+                  ],
+                )),
 
             const SizedBox(height: 16),
 
@@ -86,7 +84,8 @@ class DistributorHomeScreen extends GetView<DistributorController> {
               child: controller.isLoading.value
                   ? const Center(child: CircularProgressIndicator())
                   : TransactionsList(
-                      transactions: controller.transactions,
+                      transactions:
+                          controller.currentUser.value?.transactions ?? [],
                     ),
             )),
           ],

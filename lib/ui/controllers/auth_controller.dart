@@ -81,12 +81,6 @@ class AuthController extends GetxController {
 
         currentUser.value = UserModel.fromJson(userData);
         await saveCurrentUser(currentUser.value!);
-
-        // if (userDoc.exists) {
-        //   final userData = userDoc.data() as Map<String, dynamic>;
-
-        //   currentUser.value = UserModel.fromJson(userData);
-        //   await saveCurrentUser(currentUser.value!);
       }
     } catch (e) {
       print("Erreur lors du chargement de l'utilisateur depuis Firebase: $e");
@@ -101,19 +95,6 @@ class AuthController extends GetxController {
     }
   }
 
-  // Future<void> loadCurrentUser() async {
-  //   try {
-  //     final prefs = await SharedPreferences.getInstance();
-  //     final userData = prefs.getString('currentUser');
-
-  //     if (userData != null) {
-  //       final userJson = jsonDecode(userData);
-  //       currentUser.value = UserModel.fromJson(userJson);
-  //     }
-  //   } catch (e) {
-  //     print("Erreur lors du chargement des préférences: $e");
-  //   }
-  // }
 
   Future<void> loadCurrentUser() async {
     try {

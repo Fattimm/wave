@@ -64,9 +64,9 @@ class DistributorController extends BaseController {
         'recipientPhone': recipientPhone,
         'amount': amount,
         'date': Timestamp.now(),
-        'senderRole': 'distributor',
+        'senderRole': 'distributeur',
         'recipientRole': recipient.role,
-        'description': 'Dépôt effectué par distributeur',
+        'description': 'Dépôt effectué par le distributeur',
         'status': 'completed',
         'initiatorPhone': distributor.phone,
         'initiatorRole': 'distributeur'

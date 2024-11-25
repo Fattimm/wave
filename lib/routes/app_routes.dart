@@ -10,6 +10,8 @@ import '../ui/screens/distributor/home_screen.dart';
 import '../bindings/client_binding.dart';
 import '../bindings/distributor_binding.dart';
 import '../ui/screens/distributor/deposit_screen.dart';
+import '../ui/screens/distributor/limit_increase_screen.dart';
+import '../ui/screens/distributor/withdrawal_screen.dart';
 
 class AppRoutes {
   static final routes = [
@@ -62,6 +64,26 @@ class AppRoutes {
     GetPage(
       name: '/distributor/deposit',
       page: () => DepositScreen(),
+    ),
+    GetPage(
+      name: '/distributor/limit_increase',
+      page: () => LimitIncreaseScreen(),
+    ),
+    GetPage(
+      name: '/distributor/withdrawal',
+      page: () => WithdrawalScreen(),
+    ),
+    GetPage(
+      name: '/clients/transfer',
+      page: () =>  TransferScreen(),
+    ),
+    GetPage(
+      name: '/clients/multiple-transfer',
+      page: () => MultipleTransferScreen(),
+    ),
+    GetPage(
+      name: '/clients/schedule',
+      page: () => ScheduleScreen(),
     ),
   ];
 }

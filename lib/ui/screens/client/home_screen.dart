@@ -25,28 +25,26 @@ class ClientHomeScreen extends GetView<ClientController> {
           children: [
             // Section du solde avec Obx individuels
             Obx(() => Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  controller.balanceVisible.value
-                      ? "Solde: ${controller.currentUser?.value?.balance ?? 0.0} FCFA"
-                      : "Solde: ****",
-                  style: const TextStyle(
-                    fontSize: 24, 
-                    fontWeight: FontWeight.bold
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(
-                    controller.balanceVisible.value
-                        ? Icons.visibility
-                        : Icons.visibility_off,
-                    color: Colors.blue,
-                  ),
-                  onPressed: controller.toggleBalanceVisibility,
-                ),
-              ],
-            )),
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      controller.balanceVisible.value
+                          ? "Solde: ${controller.currentUser?.value?.balance ?? 0.0} FCFA"
+                          : "Solde: ****",
+                      style: const TextStyle(
+                          fontSize: 24, fontWeight: FontWeight.bold),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        controller.balanceVisible.value
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                        color: Colors.blue,
+                      ),
+                      onPressed: controller.toggleBalanceVisibility,
+                    ),
+                  ],
+                )),
 
             const SizedBox(height: 16),
 
@@ -81,14 +79,14 @@ class ClientHomeScreen extends GetView<ClientController> {
             ),
             const SizedBox(height: 20),
 
-            // Liste des transactions réactive
             Obx(() => Expanded(
-              child: controller.isLoading.value
-                  ? const Center(child: CircularProgressIndicator())
-                  : TransactionsList(
-                      transactions: controller.transactions,
-                    ),
-            )),
+                  child: controller.isLoading.value
+                      ? const Center(child: CircularProgressIndicator())
+                      : TransactionsList(
+                          transactions:
+                              controller.currentUser.value?.transactions ?? [],
+                        ),
+                )),
           ],
         ),
       ),
